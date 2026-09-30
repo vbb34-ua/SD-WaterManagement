@@ -1,134 +1,118 @@
 import java.io.*;
 import java.net.*;
+import java.util.Scanner;
 
-public class Watering_Station {
-	
-	public enum estado{
-		DISPONIBLE("VERDE", false, null),
-	    REGANDO("VERDE", true, null),
-	    FUGA("ROJO", false, null),
-	    FUERA_DE_SERVICIO("NARANJA", false, "Fuera de Servicio"),
-	    DESCONECTADA("GRIS", false, null);
-		
-		private final String colorFondo;
-	    private final boolean parpadea;
-	    private final String leyenda;
+public class WM_WS_E {
 
-	    estado(String colorFondo, boolean parpadea, String leyenda) {
-	        this.colorFondo = colorFondo;
-	        this.parpadea = parpadea;
-	        this.leyenda = leyenda;
-	    }
+    private final String brokerAddress;
+    private final String ipMonitor;
+    private final int puertoMonitor;
 
-	    public String getColorFondo() { return colorFondo; }
-	    public boolean isParpadea() { return parpadea; }
-	    public String getLeyenda() { return leyenda; }
-	}
+    private Socket socketMonitor;
+    private DataOutputStream salidaMonitor;
+    private DataInputStream entradaMonitor;
 
-	private final String id;
-	
-	private double volumen_acumulado;
-	
-	private final String ubicacion;
-	
-	private estado EstadoActual;
-	
-	private double caudal;
-	private boolean fuga;
-	private boolean electrovalvula;
-	
-	private String id_operario_actual;
-	
-	public Watering_Station(String id,String ubicacion) {
-		this.id = id;
-		this.ubicacion = ubicacion;
-		this.EstadoActual = estado.DESCONECTADA;
-		this.volumen_acumulado = 0.0;
-		this.caudal = 0.0;
-		this.fuga = false;
-		this.electrovalvula = false;
-		this.id_operario_actual = null;
-	}
-	
-	public String getId() { return id ; }
-    public String getUbicacion() { return ubicacion; }
-    public estado getEstadoActual() { return EstadoActual; }
-    public boolean isElectrovalvulaAbierta() { return electrovalvula; }
-    public boolean isFuga() { return fuga; }
-    public double getCaudalLitrosMinuto() { return caudal; }
-    public double getVolumenAcumuladoLitros() { return volumen_acumulado; }
-    public String getIdOperarioActual() { return id_operario_actual; }
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	public String leeSocket(Socket p_sk) {
+    // Estado simulado que se conmuta por consola (true = OK, false = KO)
+    private volatile boolean estadoSaludCorrecto = true;
+    private volatile boolean enEjecucion = true;
+
+    public WM_WS_E(String brokerAddress, String ipMonitor, int puertoMonitor) {
+        this.brokerAddress = brokerAddress;
+        this.ipMonitor = ipMonitor;
+        this.puertoMonitor = puertoMonitor;
+    }
+
+    public void iniciar() {
+        System.out.println("=== ARRANCANDO ENGINE (WM_WS_E) ===");
+        System.out.println("[ENGINE] Broker asignado: " + brokerAddress);
+
+        // Conexión con el Monitor local
+        if (!conectarConMonitor()) {
+            System.err.println("[ENGINE] No se pudo conectar con el Monitor. Abortando...");
+            return;
+        }
+
+        // Hilo interactivo de consola para simular fallo/recuperación
+        new Thread(this::hiloConsolaSimulacion).start();
+
+        // Hilo para escuchar peticiones de la Central a través del Broker de colas
+        new Thread(this::hiloConsumidorBroker).start();
+
+        // Bucle principal de respuesta al Health Check del Monitor
+        bucleAtencionMonitor();
+    }
+
+    private boolean conectarConMonitor() {
         try {
-            DataInputStream flujo = new DataInputStream(p_sk.getInputStream());
-            return flujo.readUTF();
-        } catch (Exception e) {
-            System.err.println("Error leyendo respuesta: " + e.getMessage());
-            return null;
+            System.out.println("[ENGINE] Conectando a Monitor local (" + ipMonitor + ":" + puertoMonitor + ")...");
+            socketMonitor = new Socket(ipMonitor, puertoMonitor);
+            salidaMonitor = new DataOutputStream(socketMonitor.getOutputStream());
+            entradaMonitor = new DataInputStream(socketMonitor.getInputStream());
+            System.out.println("[ENGINE] Conectado exitosamente al Monitor.");
+            return true;
+        } catch (IOException e) {
+            System.err.println("[ENGINE] Error al conectar con Monitor: " + e.getMessage());
+            return false;
         }
     }
 
-    public void escribeSocket(Socket p_sk, String p_Datos) {
+    private void bucleAtencionMonitor() {
         try {
-            DataOutputStream flujo = new DataOutputStream(p_sk.getOutputStream());
-            flujo.writeUTF(p_Datos);
-        } catch (Exception e) {
-            System.err.println("Error enviando datos: " + e.getMessage());
+            while (enEjecucion) {
+                // Espera el mensaje "HEALTH_CHECK" cada segundo
+                String mensaje = entradaMonitor.readUTF();
+
+                if ("HEALTH_CHECK".equals(mensaje)) {
+                    if (estadoSaludCorrecto) {
+                        salidaMonitor.writeUTF("OK");
+                    } else {
+                        salidaMonitor.writeUTF("KO");
+                    }
+                    salidaMonitor.flush();
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("[ENGINE] Conexión interrumpida con el Monitor: " + e.getMessage());
         }
     }
 
-    public void registrarEstacion(String host, int puerto, String idEstacion, String ubicacion) {
-        try (Socket skCliente = new Socket(host, puerto)) {
-            // Construcción del mensaje: REGISTRO#<ID>#<UBICACION>
-            String tramaEnvio = "REGISTRO#" + idEstacion + "#" + ubicacion;
-            System.out.println("Enviando a WM_Central: " + tramaEnvio);
-            escribeSocket(skCliente, tramaEnvio);
+    private void hiloConsolaSimulacion() {
+        try (Scanner scanner = new Scanner(System.in)) {
+            System.out.println("\n[SIMULADOR DE INCIDENCIAS ACTIVO]");
+            System.out.println("Pulsa [K + Enter] para forzar respuesta KO (Simular avería/fuga)");
+            System.out.println("Pulsa [O + Enter] para restablecer respuesta OK (Normalidad)");
 
-            // Lectura e impresión de la respuesta
-            String respuesta = leeSocket(skCliente);
-            System.out.println("Respuesta del servidor: " + respuesta);
-
-            System.out.println("Cerrando conexion...");
-        } catch (Exception e) {
-            System.err.println("Error de conexion con WM_Central: " + e.getMessage());
+            while (enEjecucion && scanner.hasNextLine()) {
+                String comando = scanner.nextLine().trim().toUpperCase();
+                if ("K".equals(comando)) {
+                    this.estadoSaludCorrecto = false;
+                    System.err.println("\n>>> [SIMULACIÓN] Estado cambiado a KO. El Monitor reportará FUGA a Central.");
+                } else if ("O".equals(comando)) {
+                    this.estadoSaludCorrecto = true;
+                    System.out.println("\n>>> [SIMULACIÓN] Estado restablecido a OK.");
+                }
+            }
         }
     }
 
-	/**
-	 * @param args
-	 */
+    private void hiloConsumidorBroker() {
+        // Simulación del punto de escucha del Broker/Kafka
+        System.out.println("[ENGINE] Hilo consumidor del Broker (" + brokerAddress + ") a la espera de solicitudes...");
+        // Aquí se conectará el KafkaConsumer cuando se configure el gestor
+        // de colas definitivo
+    }
+
     public static void main(String[] args) {
-        if (args.length < 2) {
-            System.out.println("Uso: java WM_WS_M <host_servidor> <puerto_servidor> [id_estacion] [ubicacion]");
+        if (args.length < 3) {
+            System.out.println("Uso: java WM_WS_E <ip_broker:puerto> <ip_Monitor> <puerto_Monitor>");
             System.exit(1);
         }
 
-        String host = args[0];
-        int puerto = Integer.parseInt(args[1]);
-        String idEstacion = (args.length >= 3) ? args[2] : "WS-04";
-        String ubicacion = (args.length >= 4) ? args[3] : "River Park";
+        String broker = args[0];
+        String ipMonitor = args[1];
+        int puertoMonitor = Integer.parseInt(args[2]);
 
-        Watering_Station cliente = new Watering_Station();
-        cliente.registrarEstacion(host, puerto, idEstacion, ubicacion);
+        WM_WS_E engine = new WM_WS_E(broker, ipMonitor, puertoMonitor);
+        engine.iniciar();
     }
 }

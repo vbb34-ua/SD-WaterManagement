@@ -96,7 +96,7 @@ public class WM_WS_E {
     }
 
     private void hiloConsumidorBroker() {
-        // Simulación del punto de escucha del Broker/Kafka
+        // Simulación del punto de escucha del Broker(Kafka)
         System.out.println("[ENGINE] Hilo consumidor del Broker (" + brokerAddress + ") a la espera de solicitudes...");
         // Aquí se conectará el KafkaConsumer cuando se configure el gestor
         // de colas definitivo

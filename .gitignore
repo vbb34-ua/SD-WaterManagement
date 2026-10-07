@@ -15,3 +15,10 @@ CoreSystem/src/main/java/Dashboard$WSInfo.class
 CoreSystem/src/main/java/DatabaseManager.class
 CoreSystem/src/main/java/WM_Central.class
 CoreSystem/src/main/java/WM_Central_Thread.class
+CoreSystem/src/main/java/water_management.db
+CoreSystem/target/*
+CoreSystem/target/classes/Arrancar_Central.bat
+CoreSystem/target/classes/slf4j-api.jar
+CoreSystem/target/classes/slf4j-simple.jar
+CoreSystem/target/classes/sqlite-jdbc.jar
+CoreSystem/target/classes/water_management.db

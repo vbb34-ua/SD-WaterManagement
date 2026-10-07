@@ -8,6 +8,13 @@ public class DatabaseManager {
     private static ConcurrentHashMap<String, String> estaciones = new ConcurrentHashMap<>();
 
     public static void inicializarYcargarEstaciones() {
+        try {
+            // Forzar la carga del Driver JDBC de SQLite (Soluciona el error 'No suitable driver found')
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            System.err.println("Error: No se encontró el driver JDBC de SQLite. Asegúrate de incluir sqlite-jdbc.jar en el classpath.");
+        }
+
         try (Connection conn = DriverManager.getConnection(URL)) {
             if (conn != null) {
                 System.out.println("BD: Conectado a SQLite correctamente.");

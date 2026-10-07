@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WaterManagement - Irrigation Control</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0a1118;
+            --bg-panel: #131c25;
+            --bg-card: #1c2a38;
+            --border-color: #27394b;
+            --text-main: #e2e8f0;
+            --text-muted: #64748b;
+            
+            --color-available: #10b981;
+            --color-watering: #34d399;
+            --color-leak: #ef4444;
+            --color-out: #f59e0b;
+            --color-offline: #64748b;
+        }
+
+        body {
+            margin: 0;
+            padding: 1.5rem;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 1.5rem;
+        }
+
+        .header-left .subtitle {
+            color: var(--color-watering);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.25rem;
+        }
+
+        .header-left h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .header-left h1 span {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status-pill .count {
+            color: white;
+            font-weight: bold;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        /* MAIN LAYOUT */
+        main {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 1.5rem;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* MAP AREA */
+        .map-container {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            background-image: 
+                linear-gradient(var(--border-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: -1px -1px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .map-area {
+            flex: 1;
+            position: relative;
+        }
+
+        .zone-circle {
+            position: absolute;
+            background: rgba(16, 185, 129, 0.03);
+            border: 1px solid rgba(16, 185, 129, 0.1);
+            border-radius: 50%;
+        }
+
+        .zone-label {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .station-node {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 10;
+        }
+
+        .station-node .dot-container {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .station-node .status-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .station-node.selected .status-text {
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Ripple effect for watering */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid var(--color-watering);
+            animation: ripple-anim 2s infinite cubic-bezier(0.65, 0, 0.34, 1);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .ripple:nth-child(2) { animation-delay: 0.5s; }
+        .ripple:nth-child(3) { animation-delay: 1s; }
+
+        @keyframes ripple-anim {
+            0% { width: 10px; height: 10px; opacity: 1; }
+            100% { width: 40px; height: 40px; opacity: 0; }
+        }
+
+        /* Map Legend */
+        .map-legend {
+            padding: 1rem;
+            display: flex;
+            gap: 1.5rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .section-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            margin: 0 0 0.75rem 0;
+        }
+
+        /* Details Card */
+        .details-card {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem;
+        }
+
+        .details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+        }
+
+        .details-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .details-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+            color: white;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            border: 1px solid transparent;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .metric-box {
+            background-color: var(--bg-card);
+            border-radius: 6px;
+            padding: 0.75rem;
+        }
+
+        .metric-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-value {
+            font-size: 1.1rem;
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .sensor-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 1.5rem 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .sensor-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        button {
+            padding: 0.6rem;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-start {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--color-available);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        
+        .btn-start:hover { background: rgba(16, 185, 129, 0.2); }
+
+        .btn-block {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--color-out);
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+
+        .btn-block:hover { background: rgba(245, 158, 11, 0.2); }
+
+        /* Logs List */
+        .logs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .log-item {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .log-content {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        .log-message {
+            color: var(--text-main);
+            margin-bottom: 0.25rem;
+        }
+
+        .log-message span {
+            color: var(--text-muted);
+        }
+
+        .log-time {
+            color: var(--text-muted);
+            font-size: 0.65rem;
+        }
+
+        /* Color Classes */
+        .color-DISPONIBLE { background-color: var(--color-available); }
+        .color-REGANDO { background-color: var(--color-watering); }
+        .color-FUGA { background-color: var(--color-leak); }
+        .color-FUERA_SERVICIO { background-color: var(--color-out); }
+        .color-DESCONECTADA { background-color: var(--color-offline); }
+
+        .border-DISPONIBLE { border-color: rgba(16, 185, 129, 0.5); color: var(--color-available); }
+        .border-REGANDO { border-color: rgba(52, 211, 153, 0.5); color: var(--color-watering); }
+        .border-FUGA { border-color: rgba(239, 68, 68, 0.5); color: var(--color-leak); }
+        .border-FUERA_SERVICIO { border-color: rgba(245, 158, 11, 0.5); color: var(--color-out); }
+        .border-DESCONECTADA { border-color: rgba(100, 116, 139, 0.5); color: var(--color-offline); }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <div class="subtitle">Sample City &middot; Parks & Gardens Network</div>
+            <h1>WaterManagement <span>&middot; Irrigation Control</span></h1>
+        </div>
+        <div class="header-right">
+            <div class="status-pill"><div class="dot color-DISPONIBLE"></div><span class="count" id="count-disp">0</span> Available</div>
+            <div class="status-pill"><div class="dot color-REGANDO"></div><span class="count" id="count-reg">0</span> Watering</div>
+            <div class="status-pill"><div class="dot color-FUGA"></div><span class="count" id="count-fuga">0</span> Leak</div>
+            <div class="status-pill"><div class="dot color-FUERA_SERVICIO"></div><span class="count" id="count-out">0</span> Out of Svc.</div>
+            <div class="status-pill"><div class="dot color-DESCONECTADA"></div><span class="count" id="count-desc">0</span> Offline</div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Map Area -->
+        <div class="map-container">
+            <div class="map-area" id="map-area">
+                <!-- Static Background Zones -->
+                <div class="zone-circle" style="width: 350px; height: 350px; top: 10%; left: 5%;">
+                    <div class="zone-label">River Park</div>
+                </div>
+                <div class="zone-circle" style="width: 300px; height: 300px; top: 5%; right: 10%;">
+                    <div class="zone-label">Riverside Gardens</div>
+                </div>
+                <div class="zone-circle" style="width: 400px; height: 400px; bottom: 5%; left: 10%;">
+                    <div class="zone-label">Central Park</div>
+                </div>
+                <div class="zone-circle" style="width: 250px; height: 250px; bottom: 10%; right: 5%;">
+                    <div class="zone-label">North Roundabout</div>
+                </div>
+            </div>
+            
+            <div class="map-legend">
+                <div class="legend-item"><div class="dot color-DISPONIBLE"></div> Available</div>
+                <div class="legend-item"><div class="dot color-REGANDO"></div> Watering (blinking)</div>
+                <div class="legend-item"><div class="dot color-FUGA"></div> Leak</div>
+                <div class="legend-item"><div class="dot color-FUERA_SERVICIO"></div> Out of Service</div>
+                <div class="legend-item"><div class="dot color-DESCONECTADA"></div> Offline</div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div>
+                <h3 class="section-title">SELECTED STATION DETAIL</h3>
+                <div class="details-card" id="details-panel">
+                    <div style="color: var(--text-muted); font-style: italic; font-size: 0.8rem;">Click a station on the map to view details.</div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="section-title">RECENT EVENTS</h3>
+                <div class="logs-list" id="logs-container">
+                    <!-- Logs go here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const mapArea = document.getElementById('map-area');
+        const logsContainer = document.getElementById('logs-container');
+        const detailsPanel = document.getElementById('details-panel');
+        
+        let stationsData = {};
+        let selectedStation = null;
+
+        // Pseudo-random fixed positions for nodes based on ID so they don't jump around
+        function getPositionForId(id) {
+            let hash = 0;
+            for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
+            // Zones: 0: TopLeft, 1: TopRight, 2: BottomLeft, 3: BottomRight
+            const zone = Math.abs(hash) % 4;
+            
+            let top, left;
+            const r1 = (Math.abs(hash * 31) % 40) + 20; // 20-60%
+            const r2 = (Math.abs(hash * 17) % 40) + 20;
+            
+            if (zone === 0) { top = r1; left = r2; }
+            else if (zone === 1) { top = r1; left = 50 + r2; }
+            else if (zone === 2) { top = 50 + r1; left = r2; }
+            else { top = 50 + r1; left = 50 + r2; }
+            
+            return { top: top + '%', left: left + '%' };
+        }
+
+        // SSE Connection
+        const eventSource = new EventSource('/events');
+
+        eventSource.addEventListener('ESTADO_INICIAL', e => updateMap(JSON.parse(e.data)));
+        eventSource.addEventListener('ESTADO_ACTUALIZADO', e => updateMap(JSON.parse(e.data)));
+        eventSource.addEventListener('TELEMETRIA', e => {
+            const t = JSON.parse(e.data);
+            if (stationsData[t.id]) {
+                stationsData[t.id].caudal = t.caudal;
+                stationsData[t.id].volumen = t.volumen;
+                if (selectedStation === t.id) updateDetailsPanel(stationsData[t.id]);
+            }
+        });
+        eventSource.addEventListener('NUEVO_LOG', e => {
+            const data = JSON.parse(e.data);
+            addLog(data.mensaje);
+        });
+
+        function updateMap(data) {
+            const counts = { DISPONIBLE:0, REGANDO:0, FUGA:0, FUERA_SERVICIO:0, DESCONECTADA:0 };
+            
+            data.forEach(ws => {
+                stationsData[ws.id] = ws;
+                if(counts[ws.estado] !== undefined) counts[ws.estado]++;
+                
+                let node = document.getElementById(`node-${ws.id}`);
+                if (!node) {
+                    node = document.createElement('div');
+                    node.id = `node-${ws.id}`;
+                    node.className = 'station-node';
+                    const pos = getPositionForId(ws.id);
+                    node.style.top = pos.top;
+                    node.style.left = pos.left;
+                    node.onclick = () => selectStation(ws.id);
+                    mapArea.appendChild(node);
+                }
+
+                // Render Node content
+                let statusSuffix = "";
+                let ripples = "";
+                if (ws.estado === "REGANDO") {
+                    statusSuffix = " • watering";
+                    ripples = `<div class="ripple"></div><div class="ripple"></div><div class="ripple"></div>`;
+                } else if (ws.estado === "FUGA") {
+                    statusSuffix = " • leak!";
+                }
+
+                node.innerHTML = `
+                    <div class="dot-container">
+                        ${ripples}
+                        <div class="dot color-${ws.estado}"></div>
+                    </div>
+                    <div class="status-text">${ws.id}${statusSuffix}</div>
+                `;
+            });
+
+            // Update Header Counts
+            document.getElementById('count-disp').innerText = counts.DISPONIBLE;
+            document.getElementById('count-reg').innerText = counts.REGANDO;
+            document.getElementById('count-fuga').innerText = counts.FUGA;
+            document.getElementById('count-out').innerText = counts.FUERA_SERVICIO;
+            document.getElementById('count-desc').innerText = counts.DESCONECTADA;
+
+            if (selectedStation && stationsData[selectedStation]) {
+                updateDetailsPanel(stationsData[selectedStation]);
+            }
+        }
+
+        function selectStation(id) {
+            // Remove previous selection highlight
+            if (selectedStation) {
+                const prev = document.getElementById(`node-${selectedStation}`);
+                if(prev) prev.classList.remove('selected');
+            }
+            
+            selectedStation = id;
+            const current = document.getElementById(`node-${id}`);
+            if(current) current.classList.add('selected');
+
+            updateDetailsPanel(stationsData[id]);
+        }
+
+        function updateDetailsPanel(ws) {
+            const statusNames = {
+                'DISPONIBLE': 'Available',
+                'REGANDO': 'Watering',
+                'FUGA': 'Leak',
+                'FUERA_SERVICIO': 'Out of Svc.',
+                'DESCONECTADA': 'Offline'
+            };
+
+            detailsPanel.innerHTML = `
+                <div class="details-header">
+                    <div>
+                        <div class="details-id">${ws.id}</div>
+                        <h2 class="details-name">${ws.location === 'Desconocida' ? 'Unmapped Zone' : ws.location}</h2>
+                    </div>
+                    <div class="status-badge border-${ws.estado}">${statusNames[ws.estado]}</div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <div class="metric-label">CURRENT FLOW</div>
+                        <div class="metric-value">${ws.caudal} L/min</div>
+                    </div>
+                    <div class="metric-box">
+                        <div class="metric-label">TOTAL VOLUME</div>
+                        <div class="metric-value">${ws.volumen} L</div>
+                    </div>
+                </div>
+
+                <ul class="sensor-list">
+                    <li><div class="dot color-${ws.estado === 'FUGA' ? 'FUGA' : 'DISPONIBLE'}"></div> Flow meter: ${ws.estado === 'FUGA' ? 'anomaly' : 'operational'}</li>
+                    <li><div class="dot color-${ws.estado === 'FUGA' ? 'FUGA' : 'DISPONIBLE'}"></div> Leak detector: ${ws.estado === 'FUGA' ? 'alert triggered' : 'no issues'}</li>
+                    <li><div class="dot color-${ws.estado === 'DESCONECTADA' ? 'DESCONECTADA' : 'DISPONIBLE'}"></div> Connection: ${ws.estado === 'DESCONECTADA' ? 'lost' : 'active'}</li>
+                </ul>
+
+                <div class="action-buttons">
+                    ${ws.estado === 'DISPONIBLE' 
+                        ? `<button class="btn-start" onclick="sendAction('${ws.id}', 'START')"><div class="dot color-DISPONIBLE"></div> Start watering</button>` 
+                        : ''}
+                    
+                    ${ws.estado === 'FUERA_SERVICIO'
+                        ? `<button class="btn-start" style="border-color: #34d399; color: #34d399;" onclick="sendAction('${ws.id}', 'ACTIVATE')"><div class="dot color-DISPONIBLE"></div> Reactivate WS</button>`
+                        : `<button class="btn-block" onclick="sendAction('${ws.id}', 'BLOCK')"><div class="dot color-FUERA_SERVICIO"></div> Block WS</button>`}
+                </div>
+            `;
+        }
+
+        function sendAction(id, action) {
+            fetch('/api/action?ws=' + id + '&action=' + action)
+                .then(r => r.text())
+                .then(res => {
+                    if (res !== 'OK') console.error('Action failed:', res);
+                });
+        }
+
+        function addLog(msg) {
+            const el = document.createElement('div');
+            el.className = 'log-item';
+            
+            let colorClass = 'color-DISPONIBLE';
+            if (msg.includes("FUGA") || msg.includes("ALERTA") || msg.includes("DENEGADA")) colorClass = 'color-FUGA';
+            else if (msg.includes("REGANDO") || msg.includes("Autorizado")) colorClass = 'color-REGANDO';
+            
+            // Clean timestamp from java backend log: [17:23:45] Message...
+            let time = "Just now";
+            let cleanMsg = msg;
+            const match = msg.match(/^\[(.*?)\] (.*)/);
+            if (match) {
+                time = match[1];
+                cleanMsg = match[2];
+            }
+
+            el.innerHTML = `
+                <div style="margin-top: 4px;"><div class="dot ${colorClass}"></div></div>
+                <div class="log-content">
+                    <div class="log-message">${cleanMsg}</div>
+                    <div class="log-time">${time}</div>
+                </div>
+            `;
+            
+            logsContainer.prepend(el);
+            if (logsContainer.children.length > 20) {
+                logsContainer.removeChild(logsContainer.lastChild);
+            }
+        }
+    </script>
+</body>
+</html>

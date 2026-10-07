@@ -67,15 +67,15 @@ public class Dashboard {
     public static synchronized void actualizarEstado(String id, Estado estado) {
         if (estaciones.containsKey(id)) {
             estaciones.get(id).estado = estado;
-            // Si deja de regar, borramos caudal y volumen para dejarlo limpio
             if (estado != Estado.REGANDO) {
                 estaciones.get(id).caudal = "0.0";
                 estaciones.get(id).operario = "-";
             }
             printDashboard();
+            WebDashboard.broadcast("ESTADO_ACTUALIZADO", obtenerEstadoJSON());
         } else {
-            // Si la estación no está registrada en memoria pero nos manda estado, la damos de alta como desconectada para visualizarla
             estaciones.put(id, new WSInfo(id, "Desconocida", estado));
+            WebDashboard.broadcast("ESTADO_ACTUALIZADO", obtenerEstadoJSON());
         }
     }
     
@@ -85,21 +85,49 @@ public class Dashboard {
             ws.caudal = caudal;
             ws.volumen = volumen;
             ws.estado = Estado.REGANDO;
+            WebDashboard.broadcast("TELEMETRIA", "{\"id\":\"" + id + "\",\"caudal\":\"" + caudal + "\",\"volumen\":\"" + volumen + "\"}");
         }
     }
     
     public static synchronized void asignarOperario(String id, String operario) {
         if (estaciones.containsKey(id)) {
             estaciones.get(id).operario = operario;
+            WebDashboard.broadcast("ESTADO_ACTUALIZADO", obtenerEstadoJSON());
         }
+    }
+
+    public static synchronized String getOperario(String id) {
+        if (estaciones.containsKey(id)) {
+            return estaciones.get(id).operario;
+        }
+        return "-";
     }
 
     public static synchronized void log(String mensaje) {
         String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
-        logs.add("[" + time + "] " + mensaje);
+        String finalMsg = "[" + time + "] " + mensaje;
+        logs.add(finalMsg);
         if (logs.size() > MAX_LOGS) {
             logs.removeFirst();
         }
+        
+        // Convertimos las comillas dobles para que no rompan el JSON
+        String msgLimpio = finalMsg.replace("\"", "\\\"");
+        WebDashboard.broadcast("NUEVO_LOG", "{\"mensaje\":\"" + msgLimpio + "\"}");
+    }
+
+    public static synchronized String obtenerEstadoJSON() {
+        StringBuilder json = new StringBuilder();
+        json.append("[");
+        boolean primero = true;
+        for (WSInfo ws : estaciones.values()) {
+            if (!primero) json.append(",");
+            json.append(String.format("{\"id\":\"%s\",\"location\":\"%s\",\"estado\":\"%s\",\"caudal\":\"%s\",\"volumen\":\"%s\",\"operario\":\"%s\"}",
+                    ws.id, ws.location, ws.estado.name(), ws.caudal, ws.volumen, ws.operario));
+            primero = false;
+        }
+        json.append("]");
+        return json.toString();
     }
     
     private static synchronized void printDashboard() {

@@ -18,6 +18,9 @@ public class WM_Central {
 
 		// Inicializar el Dashboard UI de terminal
 		Dashboard.iniciar();
+		
+		// Iniciar el Dashboard Web moderno
+		WebDashboard.iniciar(8080);
 
 		// Subtarea 1.1.1: Bucle de ejecución continuo para mantener el sistema 24/7
 		while (true) {

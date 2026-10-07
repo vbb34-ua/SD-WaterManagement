@@ -80,4 +80,27 @@ public class DatabaseManager {
             return false;
         }
     }
+
+    // 4.2.2: Obtener el estado actual de la estación desde memoria
+    public static String obtenerEstado(String id) {
+        return estaciones.getOrDefault(id, "DESCONECTADA");
+    }
+
+    // 4.2.1 y 4.2.3: Actualizar el estado de la estación en la BD y en memoria
+    public static boolean actualizarEstado(String id, String estado) {
+        String sql = "UPDATE watering_stations SET status = ? WHERE id = ?";
+        try (Connection conn = DriverManager.getConnection(URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, estado);
+            pstmt.setString(2, id);
+            pstmt.executeUpdate();
+            
+            estaciones.put(id, estado);
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Error actualizando estado de estación [" + id + "]: " + e.getMessage());
+            return false;
+        }
+    }
 }

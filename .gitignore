@@ -22,3 +22,6 @@ CoreSystem/target/classes/slf4j-api.jar
 CoreSystem/target/classes/slf4j-simple.jar
 CoreSystem/target/classes/sqlite-jdbc.jar
 CoreSystem/target/classes/water_management.db
+CoreSystem/src/main/java/*.class
+WaterManagement/Water_Station/*.class
+WaterManagement/Target/classes/*.class

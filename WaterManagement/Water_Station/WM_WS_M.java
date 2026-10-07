@@ -53,13 +53,14 @@ public class WM_WS_M {
             entradaCentral = new DataInputStream(socketCentral.getInputStream());
 
             // Trama de autenticación / registro
-            String tramaAuth = "AUTH_MONITOR#" + idWS;
-            salidaCentral.writeUTF(tramaAuth);
-            salidaCentral.flush();
+            enviarACentral("REGISTRO#" + idWS + "#Ubicacion_N/A");
 
             String respuesta = entradaCentral.readUTF();
-            System.out.println("[MONITOR] Respuesta de WM_Central: " + respuesta);
-            return respuesta != null && respuesta.startsWith("OK");
+            char ACK = 0x06;
+            boolean aceptado = respuesta != null && respuesta.equals(String.valueOf(ACK));
+            System.out.println("[MONITOR] Respuesta de WM_Central: " + (aceptado ? "ACK (Aceptado)" : "NACK/Rechazado"));
+            
+            return aceptado;
         } catch (IOException e) {
             System.err.println("[MONITOR] Error conectando con WM_Central: " + e.getMessage());
             return false;
@@ -130,13 +131,27 @@ public class WM_WS_M {
 
     private synchronized void notificarIncidenciaCentral(String estado) {
         try {
-            if (salidaCentral != null) {
-                // Trama de incidencia: INCIDENCIA#<ID_WS>#<ESTADO>
-                salidaCentral.writeUTF("INCIDENCIA#" + idWS + "#" + estado);
-                salidaCentral.flush();
+            if ("FUGA".equals(estado)) {
+                enviarACentral("AVERIA#" + idWS);
+            } else if ("RECUPERADO".equals(estado)) {
+                enviarACentral("RESUELTA#" + idWS);
             }
         } catch (IOException e) {
             System.err.println("[MONITOR] Fallo al comunicar incidencia a WM_Central: " + e.getMessage());
+        }
+    }
+
+    private void enviarACentral(String datos) throws IOException {
+        if (salidaCentral != null) {
+            char STX = 0x02;
+            char ETX = 0x03;
+            String mensaje = STX + datos + ETX;
+            char lrc = 0;
+            for (int i = 0; i < mensaje.length(); i++) {
+                lrc ^= mensaje.charAt(i);
+            }
+            salidaCentral.writeUTF(mensaje + lrc);
+            salidaCentral.flush();
         }
     }
 

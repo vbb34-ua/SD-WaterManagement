@@ -1,0 +1,17 @@
+.vscode/settings.json
+CoreSystem/target/central-1.0-SNAPSHOT.jar
+CoreSystem/target/maven-archiver/pom.properties
+CoreSystem/target/classes/DatabaseManager.class
+CoreSystem/target/classes/WM_Central_Thread.class
+CoreSystem/target/classes/WM_Central.class
+CoreSystem/target/classes/Dashboard.class
+CoreSystem/target/classes/Dashboard$1.class
+CoreSystem/target/classes/Dashboard$Estado.class
+CoreSystem/target/classes/Dashboard$WSInfo.class
+CoreSystem/src/main/java/Dashboard.class
+CoreSystem/src/main/java/Dashboard$1.class
+CoreSystem/src/main/java/Dashboard$Estado.class
+CoreSystem/src/main/java/Dashboard$WSInfo.class
+CoreSystem/src/main/java/DatabaseManager.class
+CoreSystem/src/main/java/WM_Central.class
+CoreSystem/src/main/java/WM_Central_Thread.class

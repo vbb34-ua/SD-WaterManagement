@@ -49,6 +49,7 @@ public class DatabaseManager {
                         String status = rs.getString("status");
                         
                         estaciones.put(id, status);
+                        Dashboard.cargarEstacion(id, location, Dashboard.Estado.DESCONECTADA);
                         System.out.println("ID: " + id + " | Ubicación: " + location + " | Estado: " + status);
                     }
                     if (!hayEstaciones) {

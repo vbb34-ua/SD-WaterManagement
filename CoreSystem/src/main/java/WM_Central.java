@@ -4,12 +4,14 @@ import java.io.IOException;
 public class WM_Central {
 
 	public static void main(String[] args) {
-		if (args.length < 1) {
-			System.out.println("Debe indicar el puerto de escucha del servidor");
-			System.out.println("Uso: java WM_Central puerto_servidor");
+		if (args.length < 2) {
+			System.out.println("Faltan argumentos de arranque.");
+			System.out.println("Uso: java WM_Central <puerto_sockets> <ip:puerto_kafka>");
+			System.out.println("Ejemplo: java WM_Central 6000 localhost:9092");
 			System.exit(1);
 		}
 		String puerto = args[0];
+		String kafkaBroker = args[1];
 
 		//  Inicializar sistema consultando la BD
 		DatabaseManager.inicializarYcargarEstaciones();
@@ -19,6 +21,15 @@ public class WM_Central {
 		
 		// Iniciar el Dashboard Web moderno
 		WebDashboard.iniciar(8080);
+
+		// Inicializar el productor Kafka para publicar eventos del sistema
+		KafkaManager.inicializar(kafkaBroker);
+
+		// Shutdown hook: cerrar Kafka limpiamente al apagar la JVM
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+			Dashboard.log("Apagando servidor CENTRAL...");
+			KafkaManager.cerrar();
+		}));
 
 		// Subtarea 1.1.1: Bucle de ejecución continuo para mantener el sistema 24/7
 		while (true) {

@@ -253,6 +253,7 @@ public class WM_FO {
             solicitarRiego(idWs);
 
             // Esperar a que el servicio concluya (éxito o fallo)
+            String resultadoServicio;
             synchronized (lockServicio) {
                 long tiempoInicio = System.currentTimeMillis();
                 long timeoutMaximo = 60000; // 60 segundos de seguridad por servicio
@@ -269,9 +270,11 @@ public class WM_FO {
                         break;
                     }
                 }
+                resultadoServicio = ultimoMensajeConclusion;
             }
 
-            System.out.println("\n[MODO AUTOMÁTICO] Servicio en " + idWs + " concluido.");
+            System.out.println("\n[MODO AUTOMÁTICO] Servicio en " + idWs + " concluido."
+                    + (resultadoServicio.isEmpty() ? "" : " (Resultado: " + resultadoServicio + ")"));
 
             // Requisito de la práctica: Esperar 4 segundos antes de solicitar el siguiente
             // servicio
@@ -295,6 +298,15 @@ public class WM_FO {
             enviarTrama("LISTAR_WS#" + idOperador);
         } catch (IOException e) {
             System.err.println("[OPERADOR] Error al consultar estaciones: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Obtiene el último mensaje de conclusión recibido de la Central.
+     */
+    public String getUltimoMensajeConclusion() {
+        synchronized (lockServicio) {
+            return ultimoMensajeConclusion;
         }
     }
 

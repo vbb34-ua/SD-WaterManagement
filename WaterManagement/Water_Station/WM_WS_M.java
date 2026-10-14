@@ -41,6 +41,9 @@ public class WM_WS_M {
             return;
         }
 
+        // NUEVO: Arrancamos el hilo que escucha órdenes de la Central en segundo plano
+        iniciarEscuchaCentral();
+
         // Bucle de supervisión de salud (Health Check cada 1 segundo)
         bucleSupervisionSalud();
     }
@@ -58,8 +61,9 @@ public class WM_WS_M {
             String respuesta = entradaCentral.readUTF();
             char ACK = 0x06;
             boolean aceptado = respuesta != null && respuesta.equals(String.valueOf(ACK));
-            System.out.println("[MONITOR] Respuesta de WM_Central: " + (aceptado ? "ACK (Aceptado)" : "NACK/Rechazado"));
-            
+            System.out
+                    .println("[MONITOR] Respuesta de WM_Central: " + (aceptado ? "ACK (Aceptado)" : "NACK/Rechazado"));
+
             return aceptado;
         } catch (IOException e) {
             System.err.println("[MONITOR] Error conectando con WM_Central: " + e.getMessage());
@@ -119,6 +123,34 @@ public class WM_WS_M {
                 break;
             }
         }
+    }
+
+    private void iniciarEscuchaCentral() {
+        new Thread(() -> {
+            while (enEjecucion) {
+                try {
+                    String mensaje = entradaCentral.readUTF();
+                    // Quitamos los caracteres de control STX, ETX y LRC para leer el texto
+                    if (mensaje != null && mensaje.length() > 3) {
+                        String datos = mensaje.substring(1, mensaje.indexOf(0x03));
+                        String[] partes = datos.split("#");
+
+                        if ("SOLICITUD_RIEGO".equals(partes[0])) {
+                            String idOperario = partes[1];
+                            System.out.println("[MONITOR] Solicitud de riego recibida del operario: " + idOperario);
+
+                            // Aquí el Monitor debería pedirle permiso al Engine.
+                            // Como simulación rápida, simplemente autorizamos directamente:
+                            System.out.println("[MONITOR] Riego Autorizado. Informando a Central...");
+                            enviarACentral("RIEGO_AUTORIZADO#" + idOperario);
+                        }
+                    }
+                } catch (IOException e) {
+                    System.err.println("[MONITOR] Conexión con Central perdida.");
+                    break;
+                }
+            }
+        }).start();
     }
 
     private void reportarAveriaCentral(String motivo) {

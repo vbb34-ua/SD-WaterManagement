@@ -5,9 +5,16 @@ public class DatabaseManager {
     private static final String URL = "jdbc:sqlite:water_management.db";
     
     // Almacén en memoria para acceso rápido al estado de las estaciones (para luego usar en la UI/Sockets)
-    private static ConcurrentHashMap<String, String> estaciones = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, String> estaciones = new ConcurrentHashMap<>();
 
     public static void inicializarYcargarEstaciones() {
+        try {
+            // Forzar la carga del Driver JDBC de SQLite (Soluciona el error 'No suitable driver found')
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            System.err.println("Error: No se encontró el driver JDBC de SQLite. Asegúrate de incluir sqlite-jdbc.jar en el classpath.");
+        }
+
         try (Connection conn = DriverManager.getConnection(URL)) {
             if (conn != null) {
                 System.out.println("BD: Conectado a SQLite correctamente.");
@@ -70,6 +77,29 @@ public class DatabaseManager {
             return true;
         } catch (SQLException e) {
             System.err.println("Error registrando estación: " + e.getMessage());
+            return false;
+        }
+    }
+
+    // 4.2.2: Obtener el estado actual de la estación desde memoria
+    public static String obtenerEstado(String id) {
+        return estaciones.getOrDefault(id, "DESCONECTADA");
+    }
+
+    // 4.2.1 y 4.2.3: Actualizar el estado de la estación en la BD y en memoria
+    public static boolean actualizarEstado(String id, String estado) {
+        String sql = "UPDATE watering_stations SET status = ? WHERE id = ?";
+        try (Connection conn = DriverManager.getConnection(URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, estado);
+            pstmt.setString(2, id);
+            pstmt.executeUpdate();
+            
+            estaciones.put(id, estado);
+            return true;
+        } catch (SQLException e) {
+            System.err.println("Error actualizando estado de estación [" + id + "]: " + e.getMessage());
             return false;
         }
     }

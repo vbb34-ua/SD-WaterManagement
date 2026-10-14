@@ -37,6 +37,11 @@ public class Dashboard {
         estaciones.put(id, new WSInfo(id, location, Estado.DISPONIBLE));
         log("Alta de WS exitosa: [" + id + "] en [" + location + "]");
     }
+
+    public static synchronized void cargarEstacion(String id, String location, Estado estado) {
+        estaciones.put(id, new WSInfo(id, location, estado));
+        WebDashboard.broadcast("ESTADO_ACTUALIZADO", obtenerEstadoJSON());
+    }
     
     public static synchronized void actualizarEstado(String id, Estado estado) {
         if (estaciones.containsKey(id)) {

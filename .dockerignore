@@ -1,0 +1,27 @@
+# Ignorar artefactos de compilación local (se compilan dentro del contenedor)
+CoreSystem/target/
+
+# Clases compiladas localmente
+**/*.class
+
+# Bases de datos locales (el contenedor usará su propia BD en /app)
+**/*.db
+
+# Archivos de IDE y sistema
+.vscode/
+.idea/
+*.iml
+.git/
+.gitignore
+
+# PDFs y documentación (no necesarios en imagen)
+*.pdf
+README.md
+
+# JAR de dependencias copiados manualmente (Shade las descarga de Maven)
+CoreSystem/src/main/java/*.jar
+
+# WaterManagement (estaciones) - van en contenedores separados
+WaterManagement/
+sockets_Java/
+test_kafka/

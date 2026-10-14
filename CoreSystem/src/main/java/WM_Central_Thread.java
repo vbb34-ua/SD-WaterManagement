@@ -174,7 +174,10 @@ public class WM_Central_Thread extends Thread {
 					DatabaseManager.actualizarEstado(idWs, "REGANDO");
 					Dashboard.actualizarEstado(idWs, Dashboard.Estado.REGANDO);
 					Dashboard.asignarOperario(idWs, idOperario);
-					
+
+					// Publicar evento en Kafka para que el Engine (WM_WS_E) sepa que debe abrir la electroválvula
+					KafkaManager.publicarEvento("INICIO_RIEGO", idWs + "#" + idOperario);
+
 					// Notificamos al operario
 					WM_Central_Thread hiloOperario = conexiones.get(idOperario);
 					if (hiloOperario != null) {
@@ -273,7 +276,10 @@ public class WM_Central_Thread extends Thread {
 					// 5.3.2: Cambiar el estado de la WS a "Disponible"
 					DatabaseManager.actualizarEstado(idWs, "DISPONIBLE");
 					Dashboard.actualizarEstado(idWs, Dashboard.Estado.DISPONIBLE);
-					
+
+					// Publicar evento de fin de riego en Kafka
+					KafkaManager.publicarEvento("FIN_RIEGO", idWs + "#" + volumenTotal + "#" + duracion);
+
 					// 5.3.2: Enviar el resumen final a la app del operario
 					if (!"-".equals(idOp)) {
 						WM_Central_Thread hiloOp = conexiones.get(idOp);
@@ -327,12 +333,20 @@ public class WM_Central_Thread extends Thread {
 			if (this.idConexion != null) {
 				conexiones.remove(this.idConexion);
 				Dashboard.log("Desconexión detectada: " + this.idConexion);
+				if (!this.idConexion.startsWith("OP_") && !this.idConexion.startsWith("FO_")) {
+					DatabaseManager.actualizarEstado(this.idConexion, "DESCONECTADA");
+					Dashboard.actualizarEstado(this.idConexion, Dashboard.Estado.DESCONECTADA);
+				}
 			}
 			skCliente.close();
         } catch (Exception e) {
           System.out.println("Error en el hilo de cliente: " + e.getMessage());
           if (this.idConexion != null) {
               conexiones.remove(this.idConexion);
+              if (!this.idConexion.startsWith("OP_") && !this.idConexion.startsWith("FO_")) {
+                  DatabaseManager.actualizarEstado(this.idConexion, "DESCONECTADA");
+                  Dashboard.actualizarEstado(this.idConexion, Dashboard.Estado.DESCONECTADA);
+              }
           }
         }
     }

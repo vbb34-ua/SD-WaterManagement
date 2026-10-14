@@ -111,4 +111,20 @@ public class Dashboard {
         json.append("]");
         return json.toString();
     }
+
+    public static synchronized String obtenerListadoEstaciones() {
+        if (estaciones.isEmpty()) {
+            return "No hay estaciones registradas actualmente.";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (WSInfo ws : estaciones.values()) {
+            sb.append("\n  - Estación: ").append(ws.id)
+              .append(" | Ubicación: ").append(ws.location)
+              .append(" | Estado: ").append(ws.estado.name());
+            if (ws.estado == Estado.REGANDO) {
+                sb.append(" [Caudal: ").append(ws.caudal).append(" L/min | Operario: ").append(ws.operario).append("]");
+            }
+        }
+        return sb.toString();
+    }
 }

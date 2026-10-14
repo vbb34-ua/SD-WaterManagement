@@ -1,0 +1,5 @@
+# Archivo de prueba de servicios de riego para WM_FO
+# Formato: una estación por línea (ej. WS_01)
+WS_01
+WS_02
+WS_03

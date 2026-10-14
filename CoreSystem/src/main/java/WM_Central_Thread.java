@@ -223,8 +223,13 @@ public class WM_Central_Thread extends Thread {
 					String estadoActual = DatabaseManager.obtenerEstado(idWs);
 					if ("REGANDO".equals(estadoActual)) {
 						Dashboard.log("ABORTANDO RIEGO en WS [" + idWs + "] por fuga. Notificando a Operario y Engine...");
-						// TODO: Aquí iría el envío del mensaje a KAFKA para el Engine y el Operario
-						// KafkaManager.enviarAborto(idWs);
+						String idOp = Dashboard.getOperario(idWs);
+						if (idOp != null && !"-".equals(idOp)) {
+							WM_Central_Thread hiloOp = conexiones.get(idOp);
+							if (hiloOp != null) {
+								hiloOp.enviarTextoOperario("ABORTADO: Fuga detectada en estación [" + idWs + "]. Riego cancelado de emergencia.");
+							}
+						}
 					}
 
 					// 4.2.1: Cambiar estado a FUGA
@@ -280,6 +285,12 @@ public class WM_Central_Thread extends Thread {
 					return String.valueOf(ACK);
 				}
 				break;
+
+			case "LISTAR_WS":
+				// Subtarea: Consulta de estaciones disponibles para los operarios
+				String listado = Dashboard.obtenerListadoEstaciones();
+				enviarTextoOperario("LISTA_ESTACIONES:" + listado);
+				return null;
 		}
 		
 		// Operación no reconocida, falló algún proceso o formato incorrecto

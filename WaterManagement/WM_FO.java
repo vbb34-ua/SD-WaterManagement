@@ -23,9 +23,9 @@ public class WM_FO {
     private DataOutputStream salidaCentral;
     private DataInputStream entradaCentral;
 
-    private volatile boolean enEjecucion = true;
-    private volatile boolean servicioConcluido = false;
-    private volatile String ultimoMensajeConclusion = "";
+    private boolean enEjecucion = true;
+    private boolean servicioConcluido = false;
+    private String ultimoMensajeConclusion = "";
 
     // Objeto de sincronización para esperar la conclusión de servicios en modo
     // automático

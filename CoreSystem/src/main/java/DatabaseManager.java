@@ -5,7 +5,7 @@ public class DatabaseManager {
     private static final String URL = "jdbc:sqlite:water_management.db";
     
     // Almacén en memoria para acceso rápido al estado de las estaciones (para luego usar en la UI/Sockets)
-    private static ConcurrentHashMap<String, String> estaciones = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, String> estaciones = new ConcurrentHashMap<>();
 
     public static void inicializarYcargarEstaciones() {
         try {

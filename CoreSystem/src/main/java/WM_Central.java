@@ -4,14 +4,12 @@ import java.io.IOException;
 public class WM_Central {
 
 	public static void main(String[] args) {
-		String puerto = "";
-
 		if (args.length < 1) {
-			System.out.println("Debe indicar el puerto de escucha del ser	vidor");
+			System.out.println("Debe indicar el puerto de escucha del servidor");
 			System.out.println("Uso: java WM_Central puerto_servidor");
 			System.exit(1);
 		}
-		puerto = args[0];
+		String puerto = args[0];
 
 		//  Inicializar sistema consultando la BD
 		DatabaseManager.inicializarYcargarEstaciones();
@@ -42,8 +40,7 @@ public class WM_Central {
 						System.err.println("Error al aceptar la conexión de un cliente: " + e.getMessage());
 					} catch (Exception e) {
 						// Subtarea 1.1.2: Captura de cualquier otra excepción para evitar caídas
-						System.err.println("Excepción inesperada en el bucle de clientes: " + e.getMessage());
-						e.printStackTrace();
+						System.err.println("Excepción inesperada en el bucle de clientes: " + e);
 					}
 				}
 			} catch (BindException e) {
@@ -53,8 +50,7 @@ public class WM_Central {
 				System.err.println("Error grave en el ServerSocket: " + e.getMessage() + ". Reintentando en 5 segundos...");
 				esperar(5000);
 			} catch (Exception e) {
-				System.err.println("Excepción crítica en el servidor principal: " + e.getMessage() + ". Reintentando en 5 segundos...");
-				e.printStackTrace();
+				System.err.println("Excepción crítica en el servidor principal: " + e + ". Reintentando en 5 segundos...");
 				esperar(5000);
 			}
 		}

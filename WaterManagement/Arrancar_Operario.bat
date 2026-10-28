@@ -1,5 +1,17 @@
 @echo off
 chcp 65001 > nul
+cd /d "%~dp0"
+echo ==============================================================
+echo   COMPILANDO WM_FO...
+echo ==============================================================
+javac -encoding UTF-8 WM_FO.java
+if errorlevel 1 (
+    echo Error al compilar WM_FO.java
+    pause
+    exit /b %errorlevel%
+)
+
+echo.
 echo ==============================================================
 echo   ARRANCANDO FIELD OPERATOR (WM_FO)
 echo ==============================================================
@@ -21,5 +33,5 @@ echo Operador ID:         %OP_ID%
 echo Central:             %CENTRAL_HOST%:%CENTRAL_PORT%
 echo ==============================================================
 
-java WM_FO %KAFKA_BROKER% %OP_ID% %CENTRAL_HOST% %CENTRAL_PORT%
+java -cp . WM_FO %KAFKA_BROKER% %OP_ID% %CENTRAL_HOST% %CENTRAL_PORT%
 pause

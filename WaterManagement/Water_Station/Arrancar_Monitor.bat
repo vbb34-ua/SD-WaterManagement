@@ -1,5 +1,17 @@
 @echo off
 chcp 65001 > nul
+cd /d "%~dp0"
+echo ==============================================================
+echo   COMPILANDO MONITOR...
+echo ==============================================================
+javac -encoding UTF-8 WM_WS_M.java
+if errorlevel 1 (
+    echo Error al compilar WM_WS_M.java
+    pause
+    exit /b %errorlevel%
+)
+
+echo.
 echo ==============================================================
 echo   ARRANCANDO MONITOR DE ESTACION (WM_WS_M)
 echo ==============================================================
@@ -19,5 +31,5 @@ echo Conectando a Central: %CENTRAL_HOST%:%CENTRAL_PORT% para la estacion [%WS_I
 echo Escuchando en puerto local 7000 para el Engine...
 echo ==============================================================
 
-java WM_WS_M 7000 %CENTRAL_HOST% %CENTRAL_PORT% %WS_ID%
+java -cp . WM_WS_M 7000 %CENTRAL_HOST% %CENTRAL_PORT% %WS_ID%
 pause

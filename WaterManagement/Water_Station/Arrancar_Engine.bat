@@ -1,5 +1,17 @@
 @echo off
 chcp 65001 > nul
+cd /d "%~dp0"
+echo ==============================================================
+echo   COMPILANDO ENGINE...
+echo ==============================================================
+javac -encoding UTF-8 WM_WS_E.java
+if errorlevel 1 (
+    echo Error al compilar WM_WS_E.java
+    pause
+    exit /b %errorlevel%
+)
+
+echo.
 echo ==============================================================
 echo   ARRANCANDO ENGINE DE ESTACION (WM_WS_E)
 echo ==============================================================
@@ -16,5 +28,5 @@ echo Broker Kafka:        %KAFKA_BROKER%
 echo Monitor Local:       localhost:%MONITOR_PORT%
 echo ==============================================================
 
-java WM_WS_E %KAFKA_BROKER% localhost %MONITOR_PORT%
+java -cp . WM_WS_E %KAFKA_BROKER% localhost %MONITOR_PORT%
 pause

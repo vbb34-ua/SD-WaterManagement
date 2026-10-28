@@ -6,15 +6,20 @@ import java.net.Socket;
 public class WM_Central {
 
     public static void main(String[] args) {
-        // 1. LEER LAS VARIABLES DE ENTORNO DE RAILWAY (Prioridad nube)
-        String envPortWeb = System.getenv("PORT");
-        String envPortSocket = System.getenv("SOCKET_PORT");
-        String envKafkaBroker = System.getenv("KAFKA_BROKER");
 
-        // 2. ASIGNAR PUERTOS (Si no hay variables de Railway, usa por defecto los de local)
-        int webPort = (envPortWeb != null) ? Integer.parseInt(envPortWeb) : 8080;
-        int socketPort = (envPortSocket != null) ? Integer.parseInt(envPortSocket) : (args.length > 0 ? Integer.parseInt(args[0]) : 6000);
-        String kafkaBroker = (envKafkaBroker != null) ? envKafkaBroker : (args.length > 1 ? args[1] : "localhost:9092");
+        String envPortWeb = System.getenv("PORT");
+        if (envPortWeb != null) envPortWeb = envPortWeb.replace("\"", "").trim();
+
+        String envPortSocket = System.getenv("SOCKET_PORT");
+        if (envPortSocket != null) envPortSocket = envPortSocket.replace("\"", "").trim();
+
+        String envKafkaBroker = System.getenv("KAFKA_BROKER");
+        if (envKafkaBroker != null) envKafkaBroker = envKafkaBroker.replace("\"", "").trim();
+
+        // 2. ASIGNAR PUERTOS DE FORMA SEGURA
+        int webPort = (envPortWeb != null && !envPortWeb.isEmpty()) ? Integer.parseInt(envPortWeb) : 8080;
+        int socketPort = (envPortSocket != null && !envPortSocket.isEmpty()) ? Integer.parseInt(envPortSocket) : 6000;
+        String kafkaBroker = (envKafkaBroker != null && !envKafkaBroker.isEmpty()) ? envKafkaBroker : "localhost:9092";
 
         System.out.println("--- INICIANDO CENTRAL ---");
         System.out.println("Puerto Web: " + webPort);

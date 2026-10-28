@@ -1,6 +1,6 @@
 services:
   broker:
-    image: apache/kafka:latest
+    image: apache/kafka
     hostname: broker
     container_name: broker
     ports:
@@ -22,7 +22,7 @@ services:
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       CLUSTER_ID: "gTBb85_WRXu6oQgq-brTQw"
     healthcheck:
-      test: ["CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
+      test: [ "CMD-SHELL", "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1" ]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -34,12 +34,12 @@ services:
       dockerfile: Dockerfile
     container_name: wm_central
     ports:
-      - "6000:6000"   # TCP — WS y Operarios se conectan aquí
-      - "8080:8080"   # HTTP — Dashboard Web
+      - "6000:6000" # TCP — WS y Operarios se conectan aquí
+      - "8080:8080" # HTTP — Dashboard Web
     environment:
       SOCKET_PORT: "6000"
       KAFKA_BROKER: "broker:29092"
     depends_on:
       broker:
         condition: service_healthy
-    restart: unless-stopped
+    restart: unless-stopped

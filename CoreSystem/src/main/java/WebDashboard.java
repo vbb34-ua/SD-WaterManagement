@@ -1,14 +1,12 @@
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpServer;
-
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
 
 public class WebDashboard {
 
@@ -20,24 +18,28 @@ public class WebDashboard {
         try {
             server = HttpServer.create(new InetSocketAddress(puerto), 0);
             
-            // 1. Endpoint para servir la página web HTML
-            server.createContext("/", exchange -> {
-                File file = new File("web/index.html");
-                if (file.exists()) {
-                    byte[] bytes = Files.readAllBytes(file.toPath());
-                    exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
-                    exchange.sendResponseHeaders(200, bytes.length);
-                    try (OutputStream os = exchange.getResponseBody()) {
-                        os.write(bytes);
-                    }
-                } else {
-                    String response = "Error: No se encuentra web/index.html";
-                    exchange.sendResponseHeaders(404, response.length());
-                    try (OutputStream os = exchange.getResponseBody()) {
-                        os.write(response.getBytes());
-                    }
-                }
-            });
+// 1. Endpoint para servir la página web HTML desde el JAR
+server.createContext("/", exchange -> {
+    // Intentamos leer el archivo dentro del JAR (debe estar en src/main/resources/index.html)
+    try (java.io.InputStream is = WebDashboard.class.getResourceAsStream("/index.html")) {
+        if (is != null) {
+            byte[] bytes = is.readAllBytes();
+            exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(bytes);
+            }
+        } else {
+            String response = "Error 404: No se encuentra index.html en src/main/resources/";
+            exchange.sendResponseHeaders(404, response.length());
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(response.getBytes());
+            }
+        }
+    } catch (IOException e) {
+        System.err.println("[WEB] Error al servir index.html: " + e.getMessage());
+    }
+});
 
             // 2. Endpoint SSE (Server-Sent Events) para actualizaciones en tiempo real
             server.createContext("/events", exchange -> {

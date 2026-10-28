@@ -40,7 +40,7 @@ COPY --from=build /build/target/central-1.0-SNAPSHOT.jar app.jar
 # Copiamos el frontend web (index.html) que sirve WebDashboard.
 # El servidor HTTP busca el archivo en la ruta relativa "web/index.html"
 # desde el directorio de trabajo /app, por lo que debe quedar en /app/web/
-COPY CoreSystem/src/main/java/web/ ./web/
+
 
 # Puerto de sockets TCP: WS (Watering Stations) y operarios se conectan aquí
 EXPOSE 6000

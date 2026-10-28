@@ -7,6 +7,7 @@ public class WM_Central {
 
     public static void main(String[] args) {
 
+        // 1. LEER LAS VARIABLES DE ENTORNO DE RAILWAY (Prioridad nube)
         String envPortWeb = System.getenv("PORT");
         if (envPortWeb != null) envPortWeb = envPortWeb.replace("\"", "").trim();
 
@@ -16,15 +17,39 @@ public class WM_Central {
         String envKafkaBroker = System.getenv("KAFKA_BROKER");
         if (envKafkaBroker != null) envKafkaBroker = envKafkaBroker.replace("\"", "").trim();
 
-        // 2. ASIGNAR PUERTOS DE FORMA SEGURA
-        int webPort = (envPortWeb != null && !envPortWeb.isEmpty()) ? Integer.parseInt(envPortWeb) : 8080;
-        int socketPort = (envPortSocket != null && !envPortSocket.isEmpty()) ? Integer.parseInt(envPortSocket) : 6000;
-        String kafkaBroker = (envKafkaBroker != null && !envKafkaBroker.isEmpty()) ? envKafkaBroker : "localhost:9092";
+        // 2. ASIGNAR PUERTO DE SOCKETS (Prioridad: args[0] > SOCKET_PORT > 6000 por defecto)
+        int socketPort = 6000;
+        if (args.length > 0 && !args[0].isEmpty()) {
+            socketPort = Integer.parseInt(args[0].replace("\"", "").trim());
+        } else if (envPortSocket != null && !envPortSocket.isEmpty()) {
+            socketPort = Integer.parseInt(envPortSocket);
+        }
+
+        // 3. ASIGNAR BROKER KAFKA (Prioridad: args[1] > KAFKA_BROKER > localhost:9092)
+        String kafkaBroker = "localhost:9092";
+        if (args.length > 1 && !args[1].isEmpty()) {
+            kafkaBroker = args[1].replace("\"", "").trim();
+        } else if (envKafkaBroker != null && !envKafkaBroker.isEmpty()) {
+            kafkaBroker = envKafkaBroker;
+        }
+
+        // 4. ASIGNAR PUERTO WEB (Railway inyecta PORT dinámicamente)
+        int webPort = 8080;
+        if (envPortWeb != null && !envPortWeb.isEmpty()) {
+            int parsedPort = Integer.parseInt(envPortWeb);
+            // Evitar colisión si Railway asigna PORT igual al socketPort (ej. si leyó EXPOSE 6000)
+            if (parsedPort == socketPort) {
+                System.out.println("[WARN] El puerto PORT (" + parsedPort + ") coincide con SOCKET_PORT. Asignando 8080 para Web Dashboard.");
+                webPort = 8080;
+            } else {
+                webPort = parsedPort;
+            }
+        }
 
         System.out.println("--- INICIANDO CENTRAL ---");
-        System.out.println("Puerto Web: " + webPort);
-        System.out.println("Puerto Sockets: " + socketPort);
-        System.out.println("Kafka Broker: " + kafkaBroker);
+        System.out.println("Puerto Web Dashboard: " + webPort);
+        System.out.println("Puerto Sockets TCP:   " + socketPort);
+        System.out.println("Kafka Broker:         " + kafkaBroker);
         System.out.println("-------------------------");
 
         // 3. Inicializar sistema consultando la BD

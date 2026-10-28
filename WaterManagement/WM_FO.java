@@ -411,7 +411,7 @@ public class WM_FO {
 
         // Valores por defecto para la Central si no se especifican
         String ipCentral = "localhost";
-        int puertoCentral = 5000;
+        int puertoCentral = 6000;
 
         if (args.length >= 4) {
             ipCentral = args[2];

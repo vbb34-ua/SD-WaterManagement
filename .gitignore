@@ -25,3 +25,4 @@ CoreSystem/target/classes/water_management.db
 CoreSystem/src/main/java/*.class
 WaterManagement/Water_Station/*.class
 WaterManagement/Target/classes/*.class
+Water_Station/target/*

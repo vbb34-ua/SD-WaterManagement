@@ -1,25 +1,43 @@
-import java.sql.*;
+import java.io.File;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DatabaseManager {
-    private static final String URL = "jdbc:sqlite:water_management.db";
-    
-    // Almacén en memoria para acceso rápido al estado de las estaciones (para luego usar en la UI/Sockets)
+
+    private static String getUrl() {
+        String dbPath = System.getenv("DB_PATH");
+        if (dbPath == null || dbPath.trim().isEmpty()) {
+            dbPath = "water_management.db";
+        } else {
+            dbPath = dbPath.replace("\"", "").trim();
+        }
+
+        File file = new File(dbPath);
+        if (file.getParentFile() != null && !file.getParentFile().exists()) {
+            file.getParentFile().mkdirs();
+        }
+
+        return "jdbc:sqlite:" + dbPath;
+    }
+
     private static final ConcurrentHashMap<String, String> estaciones = new ConcurrentHashMap<>();
 
     public static void inicializarYcargarEstaciones() {
         try {
-            // Forzar la carga del Driver JDBC de SQLite (Soluciona el error 'No suitable driver found')
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException e) {
-            System.err.println("Error: No se encontró el driver JDBC de SQLite. Asegúrate de incluir sqlite-jdbc.jar en el classpath.");
+            System.err.println("Error: No se encontró el driver JDBC de SQLite.");
         }
 
-        try (Connection conn = DriverManager.getConnection(URL)) {
+        try (Connection conn = DriverManager.getConnection(getUrl())) {
             if (conn != null) {
-                System.out.println("BD: Conectado a SQLite correctamente.");
+                System.out.println("BD: Conectado a SQLite correctamente en (" + getUrl() + ").");
                 
-                // 1. Crear tabla si no existe
                 String sqlCrearTabla = "CREATE TABLE IF NOT EXISTS watering_stations ("
                         + " id TEXT PRIMARY KEY,"
                         + " location TEXT NOT NULL,"
@@ -29,13 +47,11 @@ public class DatabaseManager {
                     stmt.execute(sqlCrearTabla);
                 }
 
-                // Subtarea 1.2.2: Marcar inicialmente todas las WS recuperadas de la BD en estado "DESCONECTADA"
                 String sqlActualizarEstado = "UPDATE watering_stations SET status = 'DESCONECTADA'";
                 try (Statement stmt = conn.createStatement()) {
                     stmt.executeUpdate(sqlActualizarEstado);
                 }
 
-                // Subtarea 1.2.1: Al iniciar/reiniciar, consultar la BD para cargar las estaciones de riego (WS)
                 String sqlConsultar = "SELECT id, location, status FROM watering_stations";
                 try (Statement stmt = conn.createStatement();
                      ResultSet rs = stmt.executeQuery(sqlConsultar)) {
@@ -63,11 +79,10 @@ public class DatabaseManager {
         }
     }
     
-    // Subtareas 2.2 y 2.3: Registrar nueva estación en BD y poner estado en DISPONIBLE
     public static boolean registrarEstacion(String id, String location) {
         String sql = "INSERT INTO watering_stations (id, location, status) VALUES (?, ?, 'DISPONIBLE') " +
                      "ON CONFLICT(id) DO UPDATE SET location=excluded.location, status='DISPONIBLE'";
-        try (Connection conn = DriverManager.getConnection(URL);
+        try (Connection conn = DriverManager.getConnection(getUrl());
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, id);
@@ -82,15 +97,13 @@ public class DatabaseManager {
         }
     }
 
-    // 4.2.2: Obtener el estado actual de la estación desde memoria
     public static String obtenerEstado(String id) {
         return estaciones.getOrDefault(id, "DESCONECTADA");
     }
 
-    // 4.2.1 y 4.2.3: Actualizar el estado de la estación en la BD y en memoria
     public static boolean actualizarEstado(String id, String estado) {
         String sql = "UPDATE watering_stations SET status = ? WHERE id = ?";
-        try (Connection conn = DriverManager.getConnection(URL);
+        try (Connection conn = DriverManager.getConnection(getUrl());
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setString(1, estado);
